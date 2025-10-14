@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 use std::fmt;
 use std::fmt::Display;
 use std::sync::Arc;
-use tracing::{debug, trace};
+use tracing::{trace};
 
 #[derive(Clone)]
 pub struct JitoJsonRpcSDK {
