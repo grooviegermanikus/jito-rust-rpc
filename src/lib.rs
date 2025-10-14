@@ -37,6 +37,8 @@ impl From<Value> for PrettyJsonValue {
 
 #[derive(Clone, Debug)]
 pub enum JitoRpcErrorObject {
+    /// Handling unlikely serialization/deserialization errors for RPC request or response
+    EncodingError(String),
     HttpError(Arc<reqwest::Error>),
     RpcError {
         code: i64,
@@ -54,6 +56,7 @@ impl From<reqwest::Error> for JitoRpcErrorObject {
 impl Display for JitoRpcErrorObject {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            JitoRpcErrorObject::EncodingError(err) => write!(f, "Encoding Error: {}", err),
             JitoRpcErrorObject::HttpError(err) => write!(f, "HTTP Error: {}", err),
             JitoRpcErrorObject::RpcError {
                 code,

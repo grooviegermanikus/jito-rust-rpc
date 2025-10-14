@@ -1,16 +1,29 @@
-use crate::JitoJsonRpcSDK;
+use crate::{JitoJsonRpcSDK, JitoRpcErrorObject};
 use anyhow::{anyhow, bail};
 use base64::engine::general_purpose;
 use base64::Engine;
+use serde::Deserialize;
 use serde_json::{json, Value};
 use solana_transaction::versioned::VersionedTransaction;
+
+#[derive(Deserialize)]
+pub struct SendBundleResponse {
+    result: String,
+}
+
+impl SendBundleResponse {
+    pub fn get_bundle_id(&self) -> String {
+        self.result.clone()
+    }
+}
 
 impl JitoJsonRpcSDK {
     pub async fn send_bundle_of_transactions(
         &self,
         transactions: &[VersionedTransaction],
-    ) -> anyhow::Result<Value, anyhow::Error> {
-        let encoded_txs = convert_transactions_to_base64(transactions)?;
+    ) -> Result<SendBundleResponse, JitoRpcErrorObject> {
+        let encoded_txs = convert_transactions_to_base64(transactions)
+            .map_err(|e| JitoRpcErrorObject::EncodingError(format!("Transaction serialization error: {}", e)))?;
 
         let mut endpoint = "/api/v1/bundles".to_string();
 
@@ -27,11 +40,13 @@ impl JitoJsonRpcSDK {
 
         self.send_request(&endpoint, "sendBundle", Some(request_params))
             .await
-            .map_err(|e| anyhow!("Request error: {}", e))
+            .and_then(|res| serde_json::from_value::<SendBundleResponse>(res)
+                .map_err(|e| JitoRpcErrorObject::EncodingError(format!("RPC result deserialization error: {}", e))))
+
     }
 }
 
-fn convert_transactions_to_base64(
+pub fn convert_transactions_to_base64(
     transactions: &[VersionedTransaction],
 ) -> anyhow::Result<Vec<String>, anyhow::Error> {
     let mapped: Vec<Option<Vec<u8>>> = transactions
